@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String       @id @default(cuid())
+  name               String
+  email              String       @unique
+  phone              String?
+  username           String?      @unique
+  passwordHash       String
+  role               String       @default("USER")
+  status             String       @default("ACTIVE")
+  mustChangePassword Boolean      @default(true)
+  predictions        Prediction[]
+  payments           Payment[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model Game {
+  id                   String       @id @default(cuid())
+  externalMatchId      Int          @unique
+  homeTeam             String
+  awayTeam             String
+  matchDate            DateTime
+  status               String       @default("OPEN")
+  isActive             Boolean      @default(false)
+  homeScore            Int?
+  awayScore            Int?
+  predictions          Prediction[]
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+model Prediction {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    String
+  homeScore Int
+  awayScore Int
+  isCorrect Boolean?
+  isPaid    Boolean  @default(false)
+  paymentId String?  @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  userId        String?
+  mpPaymentId   String      @unique
+  amount        Float
+  description   String
+  payerEmail    String
+  payerName     String
+  payerDocument String
+  status        String      @default("pending")
+  statusDetail  String?
+  qrCode        String
+  qrCodeBase64  String
+  user          User?       @relation(fields: [userId], references: [id])
+  prediction    Prediction?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
