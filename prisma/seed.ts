@@ -1,16 +1,21 @@
 import "./load-env";
-import { PrismaClient } from "@prisma/client";
+import { db } from "../lib/db";
 import bcrypt from "bcryptjs";
 import { ROLES, USER_STATUS } from "../lib/constants";
 
-const prisma = new PrismaClient();
+const prisma = db;
 
 async function main() {
   const adminPassword = await bcrypt.hash("456SENHA123", 10);
 
   await prisma.user.upsert({
     where: { username: "ADMIN" },
-    update: {},
+    update: {
+      passwordHash: adminPassword,
+      role: ROLES.ADMIN,
+      status: USER_STATUS.ACTIVE,
+      mustChangePassword: false,
+    },
     create: {
       name: "Administrador",
       email: "admin@bolao.local",

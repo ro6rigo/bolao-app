@@ -48,6 +48,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
     }
     console.error("Erro no login:", error);
+
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("Can't reach database") || message.includes("P1001")) {
+      return NextResponse.json(
+        {
+          error:
+            "Banco de dados indisponível. Verifique DATABASE_URL e DIRECT_URL no Neon.",
+        },
+        { status: 503 },
+      );
+    }
+    if (message.includes("does not exist") || message.includes("P2021")) {
+      return NextResponse.json(
+        {
+          error:
+            "Tabelas não criadas. Rode: npm run db:setup",
+        },
+        { status: 503 },
+      );
+    }
+    if (message === "AUTH_SECRET não configurado") {
+      return NextResponse.json(
+        { error: "AUTH_SECRET não configurado no servidor" },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json(
       { error: "Erro interno ao autenticar" },
       { status: 500 },
