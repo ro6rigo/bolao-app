@@ -1,4 +1,5 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
+import { getMercadoPagoWebhookUrl } from "@/lib/app-url";
 import {
   getMercadoPagoAccessToken,
   parseMercadoPagoError,
@@ -47,6 +48,8 @@ export async function createPixPayment(
   const paymentClient = new Payment(getClient());
   const { firstName, lastName } = splitName(input.payer.name);
 
+  const notificationUrl = getMercadoPagoWebhookUrl();
+
   let result;
   try {
     result = await paymentClient.create({
@@ -54,6 +57,7 @@ export async function createPixPayment(
         transaction_amount: input.amount,
         description: input.description,
         payment_method_id: "pix",
+        ...(notificationUrl ? { notification_url: notificationUrl } : {}),
         payer: {
           email: input.payer.email,
           first_name: firstName,

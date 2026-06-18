@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { refreshPaymentByMpId } from "@/lib/payments";
+import {
+  isMercadoPagoWebhookValidationEnabled,
+  validateMercadoPagoWebhookSignature,
+} from "@/lib/mercadopago-webhook";
 
 type WebhookBody = {
   type?: string;
@@ -25,16 +29,36 @@ function extractPaymentId(
 }
 
 export async function POST(request: Request) {
+  const url = new URL(request.url);
+  const rawBody = await request.text();
+  let body: WebhookBody = {};
+
   try {
-    const url = new URL(request.url);
-    let body: WebhookBody = {};
+    body = rawBody ? (JSON.parse(rawBody) as WebhookBody) : {};
+  } catch {
+    body = {};
+  }
 
-    try {
-      body = (await request.json()) as WebhookBody;
-    } catch {
-      body = {};
+  const dataIdFromBody =
+    body.type === "payment" && body.data?.id
+      ? String(body.data.id)
+      : null;
+
+  if (isMercadoPagoWebhookValidationEnabled()) {
+    const isValid = validateMercadoPagoWebhookSignature({
+      xSignature: request.headers.get("x-signature"),
+      xRequestId: request.headers.get("x-request-id"),
+      dataIdFromQuery: url.searchParams.get("data.id"),
+      dataIdFromBody,
+    });
+
+    if (!isValid) {
+      console.warn("Webhook Mercado Pago: assinatura inválida ou ausente");
+      return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
     }
+  }
 
+  try {
     const paymentId = extractPaymentId(body, url.searchParams);
     if (paymentId) {
       await refreshPaymentByMpId(paymentId);

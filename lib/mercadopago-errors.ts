@@ -40,6 +40,9 @@ export function parseMercadoPagoError(error: unknown): string {
       .join("; ");
 
     if (causeMessage) {
+      if (causeMessage.includes("notification_url")) {
+        return "URL de notificação inválida. Configure NEXT_PUBLIC_APP_URL com a URL HTTPS da Vercel (ex.: https://bolao-app-gamma.vercel.app).";
+      }
       if (causeMessage.includes("Payer email forbidden")) {
         return "E-mail do pagador não permitido. Use test_user_{UserID}@testuser.com, onde {UserID} é o User ID do Comprador de teste no painel MP. Não use seu e-mail real.";
       }

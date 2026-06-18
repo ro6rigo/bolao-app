@@ -2,45 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-function SimulateApprovalButton({
-  paymentId,
-  onApproved,
-}: {
-  paymentId: string;
-  onApproved: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-
-  async function handleSimulate() {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/payments/${paymentId}/simulate`, {
-        method: "POST",
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error ?? "Erro ao simular");
-      }
-      onApproved();
-    } catch {
-      // polling will retry
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleSimulate}
-      disabled={loading}
-      className="rounded-lg border border-dashed border-zinc-400 px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 disabled:opacity-60"
-    >
-      {loading ? "Simulando..." : "Simular aprovação (dev)"}
-    </button>
-  );
-}
-
 type PaymentStatusPollerProps = {
   paymentId: string;
   onStatusChange: (status: string) => void;
@@ -114,20 +75,9 @@ export function PaymentStatusPoller({
 
   if (status === "pending") {
     return (
-      <div className="flex w-full flex-col items-center gap-3">
-        <div className="flex items-center gap-2 text-sm text-zinc-600">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-          Aguardando confirmação do pagamento...
-        </div>
-        {process.env.NODE_ENV === "development" && (
-          <>
-            <p className="text-center text-xs text-zinc-500">
-              No sandbox, Pix não é pago de verdade e pode ficar pendente para
-              sempre. Use o botão abaixo para testar a confirmação na UI.
-            </p>
-            <SimulateApprovalButton paymentId={paymentId} onApproved={() => onStatusChange("approved")} />
-          </>
-        )}
+      <div className="flex items-center gap-2 text-sm text-zinc-600">
+        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+        Aguardando confirmação do pagamento...
       </div>
     );
   }
