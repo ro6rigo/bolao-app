@@ -14,6 +14,7 @@ model User {
   name               String
   email              String       @unique
   phone              String?
+  cpf                String?      @unique
   username           String?      @unique
   passwordHash       String
   role               String       @default("USER")
@@ -35,6 +36,7 @@ model Game {
   isActive             Boolean      @default(false)
   homeScore            Int?
   awayScore            Int?
+  betAmount            Float
   predictions          Prediction[]
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt

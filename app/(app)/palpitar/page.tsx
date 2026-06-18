@@ -4,13 +4,13 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { PaymentStatusPoller } from "@/app/pagamento/components/PaymentStatusPoller";
 import { PixQrDisplay } from "@/app/pagamento/components/PixQrDisplay";
 import { MatchScoreboard } from "@/components/MatchScoreboard";
-import { BET_AMOUNT_MAX, BET_AMOUNT_MIN } from "@/lib/validations/bet";
 
 type Game = {
   id: string;
   homeTeam: string;
   awayTeam: string;
   matchDate: string;
+  betAmount: number;
   homeTeamCrest?: string | null;
   awayTeamCrest?: string | null;
   competition?: string | null;
@@ -35,11 +35,31 @@ export default function PalpitarPage() {
     awayScore: number;
   } | null>(null);
 
+  const [loadingGame, setLoadingGame] = useState(true);
+
   useEffect(() => {
-    void fetch("/api/games/active").then(async (r) => {
-      const data = await r.json();
-      if (data?.id) setGame(data);
-    });
+    void (async () => {
+      try {
+        const r = await fetch("/api/games/active");
+        const text = await r.text();
+        if (!text) {
+          setError("Resposta inválida ao carregar o jogo.");
+          return;
+        }
+        const data = JSON.parse(text) as Game | { error?: string } | null;
+        if (!r.ok) {
+          setError("error" in (data ?? {}) ? String((data as { error: string }).error) : "Erro ao carregar jogo.");
+          return;
+        }
+        if (data && "id" in data) {
+          setGame({ ...data, betAmount: data.betAmount ?? 1 });
+        }
+      } catch {
+        setError("Erro ao carregar jogo. Verifique se o servidor está rodando.");
+      } finally {
+        setLoadingGame(false);
+      }
+    })();
   }, []);
 
   async function submitPrediction() {
@@ -58,8 +78,6 @@ export default function PalpitarPage() {
           gameId: game.id,
           homeScore,
           awayScore,
-          amount: Number(fd.get("amount")),
-          cpf: fd.get("cpf"),
         }),
       });
 
@@ -87,10 +105,20 @@ export default function PalpitarPage() {
 
   const handleApproved = useCallback(() => setStep("done"), []);
 
+  if (loadingGame) {
+    return (
+      <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+        <p className="text-zinc-600">Carregando jogo...</p>
+      </div>
+    );
+  }
+
   if (!game) {
     return (
       <div className="rounded-xl bg-white p-8 text-center shadow-sm">
-        <p className="text-zinc-600">Nenhum jogo aberto para palpite no momento.</p>
+        <p className="text-zinc-600">
+          {error ?? "Nenhum jogo aberto para palpite no momento."}
+        </p>
       </div>
     );
   }
@@ -185,26 +213,15 @@ export default function PalpitarPage() {
 
         <div className="rounded-xl bg-white p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-semibold text-zinc-900">Detalhes do palpite</h2>
-          <input
-            name="amount"
-            type="number"
-            step="0.01"
-            min={BET_AMOUNT_MIN}
-            max={BET_AMOUNT_MAX}
-            required
-            placeholder="Valor do palpite (R$)"
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-          />
-          <p className="text-xs text-zinc-500">
-            Valor entre R$ {BET_AMOUNT_MIN.toFixed(2).replace(".", ",")} e R${" "}
-            {BET_AMOUNT_MAX.toFixed(2).replace(".", ",")}.
+          <p className="rounded-lg bg-zinc-100 px-4 py-3 text-sm text-zinc-800">
+            Valor da aposta:{" "}
+            <strong>
+              {game.betAmount.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+            </strong>
           </p>
-          <input
-            name="cpf"
-            required
-            placeholder="CPF"
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2"
-          />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" className="w-full rounded-lg bg-zinc-900 py-3 font-medium text-white">
             Confirmar palpite e gerar Pix
@@ -228,7 +245,13 @@ export default function PalpitarPage() {
                 A aposta deve ser realizada por uma pessoa <strong>maior de 18 anos</strong>.
               </p>
               <p>
-                Ao acertar o placar, o valor recebido será de <strong>80% do montante</strong> apostado.
+                Ao acertar o placar, o valor recebido será de <strong>80% do montante</strong>{" "}
+                apostado (
+                {game.betAmount.toLocaleString("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                })}
+                ).
               </p>
             </div>
             <div className="mt-6 flex gap-3">

@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/guards";
 import { fetchMatchById } from "@/lib/football-data/client";
+import { betAmountSchema } from "@/lib/validations/bet";
 import { GAME_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
 
 const createSchema = z.object({
   externalMatchId: z.number().int().positive(),
+  betAmount: betAmountSchema,
 });
 
 export async function GET() {
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
         homeTeam: match.homeTeam.name,
         awayTeam: match.awayTeam.name,
         matchDate: new Date(match.utcDate),
+        betAmount: body.betAmount,
         status: GAME_STATUS.OPEN,
         isActive: false,
       },

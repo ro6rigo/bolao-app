@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { BET_AMOUNT_MAX, BET_AMOUNT_MIN } from "@/lib/validations/bet";
 
 type MatchOption = {
   matchId: number;
@@ -18,12 +19,14 @@ type Game = {
   matchDate: string;
   status: string;
   isActive: boolean;
+  betAmount: number;
 };
 
 export default function AdminJogosPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [matches, setMatches] = useState<MatchOption[]>([]);
   const [selectedMatch, setSelectedMatch] = useState("");
+  const [betAmount, setBetAmount] = useState("1");
   const [season, setSeason] = useState(String(new Date().getFullYear()));
   const [error, setError] = useState<string | null>(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -70,6 +73,7 @@ export default function AdminJogosPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         externalMatchId: Number(selectedMatch),
+        betAmount: Number(betAmount),
       }),
     });
     const data = await res.json();
@@ -138,6 +142,25 @@ export default function AdminJogosPage() {
             </option>
           ))}
         </select>
+
+        <label className="flex flex-col gap-1 text-sm text-zinc-800">
+          Valor da aposta (R$)
+          <input
+            type="number"
+            step="0.01"
+            min={BET_AMOUNT_MIN}
+            max={BET_AMOUNT_MAX}
+            required
+            value={betAmount}
+            onChange={(e) => setBetAmount(e.target.value)}
+            className="w-full max-w-xs rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
+          />
+          <span className="text-xs text-zinc-500">
+            Entre R$ {BET_AMOUNT_MIN.toFixed(2).replace(".", ",")} e R${" "}
+            {BET_AMOUNT_MAX.toFixed(2).replace(".", ",")}.
+          </span>
+        </label>
+
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-white">
           Cadastrar
@@ -152,7 +175,11 @@ export default function AdminJogosPage() {
               <div>
                 <p className="font-medium text-zinc-900">{game.homeTeam} x {game.awayTeam}</p>
                 <p className="text-sm text-zinc-600">
-                  {game.isActive ? "ATIVO" : "inativo"} — {game.status}
+                  {game.isActive ? "ATIVO" : "inativo"} — {game.status} — Aposta:{" "}
+                  {game.betAmount.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
                 </p>
               </div>
               <div className="flex gap-2">

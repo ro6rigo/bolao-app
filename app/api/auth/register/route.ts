@@ -4,10 +4,12 @@ import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { cpfSchema } from "@/lib/validations/cpf";
 
 const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
+  cpf: cpfSchema,
   phone: z
     .string()
     .optional()
@@ -25,12 +27,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "E-mail já cadastrado" }, { status: 409 });
     }
 
+    const existingCpf = await db.user.findUnique({ where: { cpf: body.cpf } });
+    if (existingCpf) {
+      return NextResponse.json({ error: "CPF já cadastrado" }, { status: 409 });
+    }
+
     const passwordHash = await hashPassword("123456");
 
     const user = await db.user.create({
       data: {
         name: body.name,
         email,
+        cpf: body.cpf,
         phone: body.phone,
         passwordHash,
         role: ROLES.USER,

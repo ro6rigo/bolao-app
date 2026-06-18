@@ -2,14 +2,13 @@ import { z } from "zod";
 
 import { betAmountSchema } from "@/lib/validations/bet";
 
+import { cpfSchema } from "@/lib/validations/cpf";
+
 export const createPaymentSchema = z.object({
   amount: betAmountSchema,
   email: z.string().email("E-mail inválido"),
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  cpf: z
-    .string()
-    .transform((value) => value.replace(/\D/g, ""))
-    .pipe(z.string().length(11, "CPF deve ter 11 dígitos")),
+  cpf: cpfSchema,
   description: z.string().optional().default("Pagamento via Pix"),
 });
 

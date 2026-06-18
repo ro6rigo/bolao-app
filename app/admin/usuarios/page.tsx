@@ -37,6 +37,7 @@ export default function AdminUsuariosPage() {
       body: JSON.stringify({
         name: fd.get("name"),
         email: fd.get("email"),
+        cpf: fd.get("cpf"),
         phone: fd.get("phone"),
       }),
     });
@@ -70,6 +71,7 @@ export default function AdminUsuariosPage() {
         <h3 className="font-medium">Novo usuário (senha: 123456)</h3>
         <input name="name" required placeholder="Nome" className="w-full rounded-lg border px-3 py-2" />
         <input name="email" type="email" required placeholder="E-mail" className="w-full rounded-lg border px-3 py-2" />
+        <input name="cpf" required placeholder="CPF" className="w-full rounded-lg border px-3 py-2" />
         <input name="phone" placeholder="Telefone" className="w-full rounded-lg border px-3 py-2" />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-white">Cadastrar</button>
