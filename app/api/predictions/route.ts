@@ -6,7 +6,10 @@ import {
   validatePayerEmailForCollector,
 } from "@/lib/mercadopago-collector";
 import { createPixPayment } from "@/lib/mercadopago";
-import { parseMercadoPagoError } from "@/lib/mercadopago-errors";
+import {
+  getMercadoPagoAccessToken,
+  parseMercadoPagoError,
+} from "@/lib/mercadopago-errors";
 import { GAME_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
 
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nenhum jogo aberto para palpite" }, { status: 400 });
     }
 
-    const collector = await getCollectorProfile(process.env.MP_ACCESS_TOKEN!);
+    const collector = await getCollectorProfile(getMercadoPagoAccessToken());
     const payerEmailError = validatePayerEmailForCollector(user.email, collector);
     if (payerEmailError) {
       return NextResponse.json({ error: payerEmailError }, { status: 400 });

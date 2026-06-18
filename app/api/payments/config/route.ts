@@ -3,18 +3,18 @@ import {
   getCollectorProfile,
   validatePayerEmailForCollector,
 } from "@/lib/mercadopago-collector";
-import { isMercadoPagoConfigured } from "@/lib/mercadopago-errors";
+import { getMercadoPagoAccessToken, isMercadoPagoConfigured } from "@/lib/mercadopago-errors";
 
 export async function GET() {
   if (!isMercadoPagoConfigured()) {
     return NextResponse.json({
       configured: false,
       mode: "unconfigured",
-      hint: "Configure MP_ACCESS_TOKEN no .env.local.",
+      hint: "Configure MP_ACCESS_TOKEN no .env.local ou na Vercel.",
     });
   }
 
-  const collector = await getCollectorProfile(process.env.MP_ACCESS_TOKEN!);
+  const collector = await getCollectorProfile(getMercadoPagoAccessToken());
 
   return NextResponse.json({
     configured: true,

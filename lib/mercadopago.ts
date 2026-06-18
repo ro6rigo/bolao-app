@@ -1,12 +1,11 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import {
-  assertMercadoPagoConfigured,
+  getMercadoPagoAccessToken,
   parseMercadoPagoError,
 } from "@/lib/mercadopago-errors";
 
 function getAccessToken(): string {
-  assertMercadoPagoConfigured();
-  return process.env.MP_ACCESS_TOKEN!;
+  return getMercadoPagoAccessToken();
 }
 
 function getClient() {

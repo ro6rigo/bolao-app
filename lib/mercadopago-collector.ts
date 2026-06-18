@@ -18,6 +18,11 @@ export async function getCollectorProfile(
   });
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        "Access Token do Mercado Pago inválido ou ausente. Verifique MP_ACCESS_TOKEN nas Environment Variables da Vercel.",
+      );
+    }
     throw new Error("Não foi possível consultar a conta vendedora no Mercado Pago.");
   }
 

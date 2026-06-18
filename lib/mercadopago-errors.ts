@@ -5,15 +5,24 @@ type MercadoPagoApiError = {
   cause?: Array<{ code?: string; description?: string; message?: string }>;
 };
 
+function normalizeAccessToken(raw: string | undefined): string {
+  return (raw ?? "").trim().replace(/^["']+|["']+$/g, "");
+}
+
+export function getMercadoPagoAccessToken(): string {
+  assertMercadoPagoConfigured();
+  return normalizeAccessToken(process.env.MP_ACCESS_TOKEN);
+}
+
 export function isMercadoPagoConfigured(): boolean {
-  const token = process.env.MP_ACCESS_TOKEN;
+  const token = normalizeAccessToken(process.env.MP_ACCESS_TOKEN);
   return Boolean(token && token !== "TEST-xxxxxxxx" && !token.includes("xxxx"));
 }
 
 export function assertMercadoPagoConfigured(): void {
   if (!isMercadoPagoConfigured()) {
     throw new Error(
-      "Configure MP_ACCESS_TOKEN no .env.local com o Access Token de teste do painel Mercado Pago.",
+      "Configure MP_ACCESS_TOKEN no .env.local (dev) ou nas Environment Variables da Vercel (produção) com o Access Token do painel Mercado Pago.",
     );
   }
 }

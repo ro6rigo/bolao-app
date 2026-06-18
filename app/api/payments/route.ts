@@ -6,7 +6,7 @@ import {
   validatePayerEmailForCollector,
 } from "@/lib/mercadopago-collector";
 import { createPixPayment } from "@/lib/mercadopago";
-import { parseMercadoPagoError } from "@/lib/mercadopago-errors";
+import { getMercadoPagoAccessToken, parseMercadoPagoError } from "@/lib/mercadopago-errors";
 import { createPaymentSchema } from "@/lib/validations/payment";
 
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = createPaymentSchema.parse(body);
 
-    const collector = await getCollectorProfile(process.env.MP_ACCESS_TOKEN!);
+    const collector = await getCollectorProfile(getMercadoPagoAccessToken());
     const payerEmailError = validatePayerEmailForCollector(
       data.email,
       collector,
