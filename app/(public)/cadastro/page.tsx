@@ -24,7 +24,7 @@ export default function CadastroPage() {
           name: formData.get("name"),
           email: formData.get("email"),
           cpf: formData.get("cpf"),
-          phone: formData.get("phone") || undefined,
+          phone: formData.get("phone"),
         }),
       });
 
@@ -55,7 +55,7 @@ export default function CadastroPage() {
           <input name="name" required placeholder="Nome completo" className="rounded-lg border border-zinc-300 px-3 py-2" />
           <input name="email" type="email" required placeholder="E-mail" className="rounded-lg border border-zinc-300 px-3 py-2" />
           <input name="cpf" required placeholder="CPF" inputMode="numeric" className="rounded-lg border border-zinc-300 px-3 py-2" />
-          <input name="phone" placeholder="Telefone (opcional)" className="rounded-lg border border-zinc-300 px-3 py-2" />
+          <input name="phone" required placeholder="Telefone" className="rounded-lg border border-zinc-300 px-3 py-2" />
           {error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
           )}

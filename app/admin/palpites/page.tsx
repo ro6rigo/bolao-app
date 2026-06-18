@@ -33,7 +33,7 @@ export default function AdminPalpitesPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-zinc-500">
-              <th className="pb-2">Usuário</th>
+              <th className="pb-2">E-mail</th>
               <th className="pb-2">Jogo</th>
               <th className="pb-2">Palpite</th>
               <th className="pb-2">Valor</th>
@@ -44,7 +44,7 @@ export default function AdminPalpitesPage() {
           <tbody>
             {predictions.map((p) => (
               <tr key={p.id} className="border-b border-zinc-50">
-                <td className="py-2">{p.user.name}</td>
+                <td className="py-2">{p.user.email}</td>
                 <td className="py-2">{p.game.homeTeam} x {p.game.awayTeam}</td>
                 <td className="py-2">{p.homeScore} x {p.awayScore}</td>
                 <td className="py-2">

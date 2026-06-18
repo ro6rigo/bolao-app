@@ -5,12 +5,13 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { cpfSchema } from "@/lib/validations/cpf";
+import { phoneSchema } from "@/lib/validations/phone";
 
 const createSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   cpf: cpfSchema,
-  phone: z.string().optional(),
+  phone: phoneSchema,
   password: z.string().min(6).optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 });

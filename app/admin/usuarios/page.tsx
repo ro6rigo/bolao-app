@@ -72,7 +72,7 @@ export default function AdminUsuariosPage() {
         <input name="name" required placeholder="Nome" className="w-full rounded-lg border px-3 py-2" />
         <input name="email" type="email" required placeholder="E-mail" className="w-full rounded-lg border px-3 py-2" />
         <input name="cpf" required placeholder="CPF" className="w-full rounded-lg border px-3 py-2" />
-        <input name="phone" placeholder="Telefone" className="w-full rounded-lg border px-3 py-2" />
+        <input name="phone" required placeholder="Telefone" className="w-full rounded-lg border px-3 py-2" />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-white">Cadastrar</button>
       </form>
@@ -83,6 +83,7 @@ export default function AdminUsuariosPage() {
             <tr className="border-b text-left text-zinc-500">
               <th className="pb-2">Nome</th>
               <th className="pb-2">E-mail</th>
+              <th className="pb-2">Telefone</th>
               <th className="pb-2">Status</th>
               <th className="pb-2">Palpites pagos</th>
               <th className="pb-2">Ações</th>
@@ -93,6 +94,7 @@ export default function AdminUsuariosPage() {
               <tr key={u.id} className="border-b border-zinc-50">
                 <td className="py-2">{u.name}</td>
                 <td className="py-2">{u.email}</td>
+                <td className="py-2">{u.phone ?? "—"}</td>
                 <td className="py-2">{u.status}</td>
                 <td className="py-2">{u.betCount}</td>
                 <td className="py-2 space-x-2">

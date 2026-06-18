@@ -5,16 +5,13 @@ import { createSession } from "@/lib/auth/session";
 import { ROLES, USER_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { cpfSchema } from "@/lib/validations/cpf";
+import { phoneSchema } from "@/lib/validations/phone";
 
 const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   cpf: cpfSchema,
-  phone: z
-    .string()
-    .optional()
-    .nullable()
-    .transform((value) => value?.trim() || undefined),
+  phone: phoneSchema,
 });
 
 export async function POST(request: Request) {
