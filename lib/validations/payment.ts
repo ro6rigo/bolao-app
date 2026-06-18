@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+import { betAmountSchema } from "@/lib/validations/bet";
+
 export const createPaymentSchema = z.object({
-  amount: z.number().positive("Valor deve ser maior que zero"),
+  amount: betAmountSchema,
   email: z.string().email("E-mail inválido"),
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   cpf: z

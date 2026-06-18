@@ -3,15 +3,23 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { PaymentStatusPoller } from "@/app/pagamento/components/PaymentStatusPoller";
 import { PixQrDisplay } from "@/app/pagamento/components/PixQrDisplay";
+import { MatchScoreboard } from "@/components/MatchScoreboard";
+import { BET_AMOUNT_MAX, BET_AMOUNT_MIN } from "@/lib/validations/bet";
 
 type Game = {
   id: string;
   homeTeam: string;
   awayTeam: string;
   matchDate: string;
+  homeTeamCrest?: string | null;
+  awayTeamCrest?: string | null;
+  competition?: string | null;
 };
 
 type Step = "form" | "payment" | "done";
+
+const scoreInputClass =
+  "w-14 rounded-lg border-2 border-amber-400/80 bg-white px-1 py-2 text-center text-2xl font-bold tabular-nums text-red-600 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-400/40 sm:w-16 sm:text-3xl [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 export default function PalpitarPage() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -22,6 +30,10 @@ export default function PalpitarPage() {
   const [qr, setQr] = useState<{ qrCode: string; qrCodeBase64: string; amount: number } | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedScore, setSelectedScore] = useState<{
+    homeScore: number;
+    awayScore: number;
+  } | null>(null);
 
   useEffect(() => {
     void fetch("/api/games/active").then(async (r) => {
@@ -36,14 +48,16 @@ export default function PalpitarPage() {
     setSubmitting(true);
 
     const fd = new FormData(formRef.current);
+    const homeScore = Number(fd.get("homeScore"));
+    const awayScore = Number(fd.get("awayScore"));
     try {
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           gameId: game.id,
-          homeScore: Number(fd.get("homeScore")),
-          awayScore: Number(fd.get("awayScore")),
+          homeScore,
+          awayScore,
           amount: Number(fd.get("amount")),
           cpf: fd.get("cpf"),
         }),
@@ -56,6 +70,7 @@ export default function PalpitarPage() {
       }
 
       setPaymentId(data.paymentId);
+      setSelectedScore({ homeScore, awayScore });
       setQr({ qrCode: data.qrCode, qrCodeBase64: data.qrCodeBase64, amount: data.amount });
       setStep("payment");
     } finally {
@@ -80,35 +95,56 @@ export default function PalpitarPage() {
     );
   }
 
+  const scoreboardProps = {
+    homeTeam: game.homeTeam,
+    awayTeam: game.awayTeam,
+    homeTeamCrest: game.homeTeamCrest,
+    awayTeamCrest: game.awayTeamCrest,
+    competition: game.competition,
+    matchDate: game.matchDate,
+  };
+
   if (step === "done") {
     return (
-      <div className="rounded-xl bg-white p-8 text-center shadow-sm space-y-4">
-        <p className="text-lg font-medium text-green-700">Palpite confirmado!</p>
-        <p className="text-sm text-zinc-600">
-          {game.homeTeam} x {game.awayTeam}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setStep("form");
-            setPaymentId(null);
-            setQr(null);
-            setError(null);
-          }}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white"
-        >
-          Fazer outro palpite
-        </button>
+      <div className="space-y-6">
+        <MatchScoreboard
+          {...scoreboardProps}
+          homeScore={selectedScore?.homeScore}
+          awayScore={selectedScore?.awayScore}
+        />
+        <div className="rounded-xl bg-white p-8 text-center shadow-sm space-y-4">
+          <p className="text-lg font-medium text-green-700">Palpite confirmado!</p>
+          <button
+            type="button"
+            onClick={() => {
+              setStep("form");
+              setPaymentId(null);
+              setQr(null);
+              setSelectedScore(null);
+              setError(null);
+            }}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white"
+          >
+            Fazer outro palpite
+          </button>
+        </div>
       </div>
     );
   }
 
   if (step === "payment" && qr && paymentId) {
     return (
-      <div className="flex flex-col items-center gap-6 rounded-xl bg-white p-8 shadow-sm">
-        <h2 className="text-lg font-semibold">Pague via Pix para confirmar</h2>
-        <PixQrDisplay {...qr} />
-        <PaymentStatusPoller paymentId={paymentId} onStatusChange={(s) => s === "approved" && handleApproved()} />
+      <div className="flex flex-col gap-6">
+        <MatchScoreboard
+          {...scoreboardProps}
+          homeScore={selectedScore?.homeScore}
+          awayScore={selectedScore?.awayScore}
+        />
+        <div className="flex flex-col items-center gap-6 rounded-xl bg-white p-8 shadow-sm">
+          <h2 className="text-lg font-semibold">Pague via Pix para confirmar</h2>
+          <PixQrDisplay {...qr} />
+          <PaymentStatusPoller paymentId={paymentId} onStatusChange={(s) => s === "approved" && handleApproved()} />
+        </div>
       </div>
     );
   }
@@ -118,34 +154,62 @@ export default function PalpitarPage() {
       <form
         ref={formRef}
         onSubmit={handleFormSubmit}
-        className="rounded-xl bg-white p-8 shadow-sm space-y-4"
+        className="space-y-6"
       >
-        <h2 className="text-xl font-semibold text-zinc-900">Palpitar</h2>
-        <p className="text-zinc-600">
-          {game.homeTeam} x {game.awayTeam}
-        </p>
-        <p className="text-sm text-zinc-500">
-          {new Date(game.matchDate).toLocaleString("pt-BR")}
-        </p>
-
-        <div className="flex gap-4">
-          <input name="homeScore" type="number" min="0" required placeholder="Gols casa" className="flex-1 rounded-lg border px-3 py-2" />
-          <input name="awayScore" type="number" min="0" required placeholder="Gols fora" className="flex-1 rounded-lg border px-3 py-2" />
-        </div>
-        <input
-          name="amount"
-          type="number"
-          step="0.01"
-          min="0.01"
-          required
-          placeholder="Valor do palpite (R$)"
-          className="w-full rounded-lg border px-3 py-2"
+        <MatchScoreboard
+          {...scoreboardProps}
+          scoreInputs={
+            <div className="flex items-center gap-2 sm:gap-3">
+              <input
+                name="homeScore"
+                type="number"
+                min="0"
+                required
+                placeholder="0"
+                aria-label={`Gols ${game.homeTeam}`}
+                className={`${scoreInputClass} placeholder:text-red-300`}
+              />
+              <span className="text-2xl font-light text-white/50 sm:text-3xl">-</span>
+              <input
+                name="awayScore"
+                type="number"
+                min="0"
+                required
+                placeholder="0"
+                aria-label={`Gols ${game.awayTeam}`}
+                className={`${scoreInputClass} placeholder:text-red-300`}
+              />
+            </div>
+          }
         />
-        <input name="cpf" required placeholder="CPF" className="w-full rounded-lg border px-3 py-2" />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button type="submit" className="w-full rounded-lg bg-zinc-900 py-3 font-medium text-white">
-          Confirmar palpite e gerar Pix
-        </button>
+
+        <div className="rounded-xl bg-white p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-semibold text-zinc-900">Detalhes do palpite</h2>
+          <input
+            name="amount"
+            type="number"
+            step="0.01"
+            min={BET_AMOUNT_MIN}
+            max={BET_AMOUNT_MAX}
+            required
+            placeholder="Valor do palpite (R$)"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2"
+          />
+          <p className="text-xs text-zinc-500">
+            Valor entre R$ {BET_AMOUNT_MIN.toFixed(2).replace(".", ",")} e R${" "}
+            {BET_AMOUNT_MAX.toFixed(2).replace(".", ",")}.
+          </p>
+          <input
+            name="cpf"
+            required
+            placeholder="CPF"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2"
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button type="submit" className="w-full rounded-lg bg-zinc-900 py-3 font-medium text-white">
+            Confirmar palpite e gerar Pix
+          </button>
+        </div>
       </form>
 
       {showConfirmModal && (

@@ -6,6 +6,7 @@ const links = [
   { href: "/admin/usuarios", label: "Usuários" },
   { href: "/admin/palpites", label: "Palpites" },
   { href: "/admin/ganhadores", label: "Ganhadores" },
+  { href: "/alterar-senha", label: "Alterar senha" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

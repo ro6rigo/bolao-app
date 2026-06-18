@@ -4,8 +4,8 @@ export type FootballDataMatch = {
   id: number;
   utcDate: string;
   status: string;
-  homeTeam: { id: number; name: string; shortName?: string };
-  awayTeam: { id: number; name: string; shortName?: string };
+  homeTeam: { id: number; name: string; shortName?: string; tla?: string; crest?: string };
+  awayTeam: { id: number; name: string; shortName?: string; tla?: string; crest?: string };
   score: {
     fullTime: { home: number | null; away: number | null };
   };
@@ -50,6 +50,14 @@ async function apiFetch<T>(path: string): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export function getTeamCrests(match: FootballDataMatch) {
+  return {
+    homeTeamCrest: match.homeTeam.crest ?? null,
+    awayTeamCrest: match.awayTeam.crest ?? null,
+    competition: match.competition?.name ?? null,
+  };
 }
 
 export function normalizeMatch(match: FootballDataMatch) {

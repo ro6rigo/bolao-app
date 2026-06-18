@@ -74,11 +74,6 @@ export async function middleware(request: NextRequest) {
         session.role === "ADMIN" ? "/admin/jogos" : "/palpitar";
       return NextResponse.redirect(new URL(dest, request.url));
     }
-    if (isAuthOnly) {
-      const dest =
-        session.role === "ADMIN" ? "/admin/jogos" : "/palpitar";
-      return NextResponse.redirect(new URL(dest, request.url));
-    }
   }
 
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {

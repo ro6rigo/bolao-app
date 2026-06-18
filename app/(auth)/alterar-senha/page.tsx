@@ -49,10 +49,12 @@ export default function AlterarSenhaPage() {
     <div className="flex min-h-full items-center justify-center bg-zinc-50 px-4 py-12">
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-zinc-900">Alterar senha</h1>
-        <p className="mt-2 text-sm text-zinc-500">Obrigatório no primeiro acesso</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          Informe a senha atual e escolha uma nova senha.
+        </p>
 
         <div className="mt-6 flex flex-col gap-4">
-          <input name="currentPassword" type="password" required placeholder="Senha atual (123456)" className="rounded-lg border border-zinc-300 px-3 py-2" />
+          <input name="currentPassword" type="password" required placeholder="Senha atual" className="rounded-lg border border-zinc-300 px-3 py-2" />
           <input name="newPassword" type="password" required minLength={6} placeholder="Nova senha" className="rounded-lg border border-zinc-300 px-3 py-2" />
           <input name="confirmPassword" type="password" required minLength={6} placeholder="Confirmar nova senha" className="rounded-lg border border-zinc-300 px-3 py-2" />
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

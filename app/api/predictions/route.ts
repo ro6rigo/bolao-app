@@ -10,6 +10,7 @@ import {
   getMercadoPagoAccessToken,
   parseMercadoPagoError,
 } from "@/lib/mercadopago-errors";
+import { betAmountSchema } from "@/lib/validations/bet";
 import { GAME_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
 
@@ -17,7 +18,7 @@ const schema = z.object({
   gameId: z.string(),
   homeScore: z.number().int().min(0),
   awayScore: z.number().int().min(0),
-  amount: z.number().positive("Valor deve ser maior que zero"),
+  amount: betAmountSchema,
   cpf: z
     .string()
     .transform((v) => v.replace(/\D/g, ""))
@@ -89,6 +90,12 @@ export async function POST(request: Request) {
       amount: payment.amount,
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0]?.message ?? "Dados inválidos" },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
       { error: parseMercadoPagoError(error) },
       { status: 500 },
