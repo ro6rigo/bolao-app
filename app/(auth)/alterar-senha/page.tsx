@@ -50,7 +50,7 @@ export default function AlterarSenhaPage() {
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-zinc-900">Alterar senha</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Informe a senha atual e escolha uma nova senha.
+          Informe a senha atual(123456) e escolha uma nova senha.
         </p>
 
         <div className="mt-6 flex flex-col gap-4">
