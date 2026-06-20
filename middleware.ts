@@ -85,8 +85,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const userRoutes = ["/perfil", "/palpites", "/palpitar", "/pagamento"];
-  const userApiRoutes = ["/api/predictions", "/api/profile", "/api/games"];
+  const userRoutes = ["/perfil", "/palpites", "/palpitar", "/pagamento", "/resultados"];
+  const userApiRoutes = ["/api/predictions", "/api/profile", "/api/games", "/api/results"];
   if (
     userRoutes.some((route) => pathname.startsWith(route)) ||
     userApiRoutes.some((route) => pathname.startsWith(route))

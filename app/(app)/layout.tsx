@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 const links = [
   { href: "/palpitar", label: "Palpitar" },
   { href: "/palpites", label: "Meus palpites" },
+  { href: "/resultados", label: "Resultados" },
   { href: "/palpites/acertos", label: "Acertos" },
   { href: "/perfil", label: "Perfil" },
 ];
