@@ -223,7 +223,7 @@ export default function PalpitarPage() {
             </strong>
           </p>
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="w-full rounded-lg bg-zinc-900 py-3 font-medium text-white">
+          <button type="submit" className="w-full rounded-lg bg-zinc-900 py-3 font-medium text-white" disabled>
             Confirmar palpite e gerar Pix
           </button>
         </div>
