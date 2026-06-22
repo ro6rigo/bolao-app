@@ -11,10 +11,20 @@ type Game = {
   awayTeam: string;
   matchDate: string;
   betAmount: number;
+  bettingClosesAt?: string;
+  bettingCloseMinutesBefore?: number;
   homeTeamCrest?: string | null;
   awayTeamCrest?: string | null;
   competition?: string | null;
 };
+
+function formatCloseTime(iso: string): string {
+  return new Date(iso).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 type Step = "form" | "payment" | "done";
 
@@ -61,6 +71,20 @@ export default function PalpitarPage() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!game?.bettingClosesAt) return;
+
+    const closesAt = new Date(game.bettingClosesAt).getTime();
+    const timer = window.setInterval(() => {
+      if (Date.now() >= closesAt) {
+        setGame(null);
+        setError("Palpites encerrados para este jogo.");
+      }
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [game?.bettingClosesAt, game?.id]);
 
   async function submitPrediction() {
     if (!game || !formRef.current) return;
@@ -213,6 +237,18 @@ export default function PalpitarPage() {
 
         <div className="rounded-xl bg-white p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-semibold text-zinc-900">Detalhes do palpite</h2>
+          {game.bettingClosesAt && (
+            <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Palpites encerram em{" "}
+              <strong>{formatCloseTime(game.bettingClosesAt)}</strong>
+              {game.bettingCloseMinutesBefore != null && (
+                <span className="text-amber-800/80">
+                  {" "}
+                  ({game.bettingCloseMinutesBefore} min antes do jogo)
+                </span>
+              )}
+            </p>
+          )}
           <p className="rounded-lg bg-zinc-100 px-4 py-3 text-sm text-zinc-800">
             Valor da aposta:{" "}
             <strong>

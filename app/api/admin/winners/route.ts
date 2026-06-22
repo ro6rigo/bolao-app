@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
+import {
+  calculatePrizePerWinner,
+  sumPaidPredictionAmounts,
+} from "@/lib/games/prize";
 
 export async function GET(request: Request) {
   try {
@@ -12,12 +16,32 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "gameId obrigatório" }, { status: 400 });
     }
 
-    const winners = await db.prediction.findMany({
-      where: { gameId, isPaid: true, isCorrect: true },
-      include: { user: { select: { name: true, email: true, phone: true } } },
+    const paidPredictions = await db.prediction.findMany({
+      where: { gameId, isPaid: true },
+      include: { payment: { select: { amount: true } } },
     });
 
-    return NextResponse.json(winners);
+    const totalPaid = sumPaidPredictionAmounts(paidPredictions);
+
+    const winners = await db.prediction.findMany({
+      where: { gameId, isPaid: true, isCorrect: true },
+      include: { user: { select: { name: true, phone: true } } },
+    });
+
+    const prizePerWinner = calculatePrizePerWinner(totalPaid, winners.length);
+
+    return NextResponse.json({
+      totalPaid,
+      winnerCount: winners.length,
+      prizePerWinner,
+      winners: winners.map((winner) => ({
+        id: winner.id,
+        homeScore: winner.homeScore,
+        awayScore: winner.awayScore,
+        prize: prizePerWinner,
+        user: winner.user,
+      })),
+    });
   } catch {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }

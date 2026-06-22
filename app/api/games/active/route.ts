@@ -5,6 +5,12 @@ import {
   fetchMatchById,
   getTeamCrests,
 } from "@/lib/football-data/client";
+import {
+  getBetCloseMinutesBefore,
+  getBettingClosesAt,
+  isBettingOpen,
+} from "@/lib/games/betting-window";
+import { closeGameIfBettingExpired } from "@/lib/games/close-game-if-expired";
 
 export async function GET() {
   try {
@@ -13,6 +19,12 @@ export async function GET() {
     });
 
     if (!game) {
+      return NextResponse.json(null);
+    }
+
+    await closeGameIfBettingExpired(game);
+
+    if (!isBettingOpen(game.matchDate)) {
       return NextResponse.json(null);
     }
 
@@ -30,12 +42,17 @@ export async function GET() {
       // Bandeiras são opcionais — a tela funciona só com nomes dos times.
     }
 
+    const bettingClosesAt = getBettingClosesAt(game.matchDate);
+
     return NextResponse.json({
       ...game,
       betAmount: game.betAmount ?? 1,
       homeTeamCrest,
       awayTeamCrest,
       competition,
+      bettingClosesAt: bettingClosesAt.toISOString(),
+      bettingCloseMinutesBefore: getBetCloseMinutesBefore(),
+      bettingOpen: true,
     });
   } catch (error) {
     console.error("Erro em /api/games/active:", error);

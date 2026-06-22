@@ -2,13 +2,38 @@
 
 import { useEffect, useState } from "react";
 
-type Game = { id: string; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null; status: string };
-type Winner = { id: string; homeScore: number; awayScore: number; user: { name: string; email: string; phone: string | null } };
+type Game = {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: string;
+};
+
+type Winner = {
+  id: string;
+  homeScore: number;
+  awayScore: number;
+  prize: number;
+  user: { name: string; phone: string | null };
+};
+
+type WinnersResponse = {
+  winners: Winner[];
+  totalPaid: number;
+  winnerCount: number;
+  prizePerWinner: number;
+};
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default function AdminGanhadoresPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGame, setSelectedGame] = useState("");
-  const [winners, setWinners] = useState<Winner[]>([]);
+  const [winnersData, setWinnersData] = useState<WinnersResponse | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   async function loadGames() {
@@ -26,7 +51,10 @@ export default function AdminGanhadoresPage() {
     setMessage(null);
     const res = await fetch(`/api/admin/games/${selectedGame}/sync-result`, { method: "POST" });
     const data = await res.json();
-    if (!res.ok) { setMessage(data.error); return; }
+    if (!res.ok) {
+      setMessage(data.error);
+      return;
+    }
     setMessage(`Placar atualizado: ${data.homeScore} x ${data.awayScore}`);
     await loadWinners();
     const gamesRes = await fetch("/api/admin/games");
@@ -37,10 +65,15 @@ export default function AdminGanhadoresPage() {
   async function loadWinners() {
     if (!selectedGame) return;
     const res = await fetch(`/api/admin/winners?gameId=${selectedGame}`);
-    setWinners(await res.json());
+    const data = (await res.json()) as WinnersResponse;
+    setWinnersData(res.ok ? data : null);
   }
 
-  useEffect(() => { void loadWinners(); }, [selectedGame]);
+  useEffect(() => {
+    void loadWinners();
+  }, [selectedGame]);
+
+  const winners = winnersData?.winners ?? [];
 
   return (
     <div className="space-y-6">
@@ -70,13 +103,22 @@ export default function AdminGanhadoresPage() {
 
       <div className="rounded-xl bg-white p-6 shadow-sm">
         <h3 className="mb-4 font-medium">Ganhadores</h3>
+
+        {winnersData && winners.length > 0 && (
+          <p className="mb-4 text-sm text-zinc-600">
+            Total arrecadado: {formatCurrency(winnersData.totalPaid)} — Prêmio por ganhador
+            (80%): {formatCurrency(winnersData.prizePerWinner)}
+          </p>
+        )}
+
         {winners.length === 0 ? (
           <p className="text-sm text-zinc-500">Nenhum ganhador para este jogo.</p>
         ) : (
           <ul className="space-y-2">
             {winners.map((w) => (
               <li key={w.id} className="border-b border-zinc-50 pb-2">
-                {w.user.name} ({w.user.email}) — palpite {w.homeScore}x{w.awayScore}
+                {w.user.name} ({w.user.phone ?? "—"}) — palpite {w.homeScore} x {w.awayScore} —{" "}
+                {formatCurrency(w.prize)}
               </li>
             ))}
           </ul>

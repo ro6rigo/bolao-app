@@ -12,6 +12,8 @@ import {
 } from "@/lib/mercadopago-errors";
 import { GAME_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { closeGameIfBettingExpired } from "@/lib/games/close-game-if-expired";
+import { formatBettingCloseMessage, isBettingOpen } from "@/lib/games/betting-window";
 
 const schema = z.object({
   gameId: z.string(),
@@ -41,6 +43,15 @@ export async function POST(request: Request) {
     });
     if (!game) {
       return NextResponse.json({ error: "Nenhum jogo aberto para palpite" }, { status: 400 });
+    }
+
+    await closeGameIfBettingExpired(game);
+
+    if (!isBettingOpen(game.matchDate)) {
+      return NextResponse.json(
+        { error: formatBettingCloseMessage(game.matchDate) },
+        { status: 400 },
+      );
     }
 
     const amount = game.betAmount;
