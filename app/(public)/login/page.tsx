@@ -52,14 +52,14 @@ export default function LoginPage() {
       >
         <h1 className="text-2xl font-semibold text-zinc-900">Acessar</h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Use e-mail ou usuário ADMIN
+          E-mail
         </p>
 
         <div className="mt-6 flex flex-col gap-4">
           <input
             name="login"
             required
-            placeholder="E-mail ou ADMIN"
+            placeholder="E-mail"
             className="rounded-lg border border-zinc-300 px-3 py-2"
           />
           <input
