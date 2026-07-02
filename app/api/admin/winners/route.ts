@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
-import {
-  calculatePrizePerWinner,
-  sumPaidPredictionAmounts,
-} from "@/lib/games/prize";
+import { calculatePrizePerWinner } from "@/lib/games/prize";
+import { getGamePoolStats } from "@/lib/games/pool";
 
 export async function GET(request: Request) {
   try {
@@ -16,12 +14,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "gameId obrigatório" }, { status: 400 });
     }
 
-    const paidPredictions = await db.prediction.findMany({
-      where: { gameId, isPaid: true },
-      include: { payment: { select: { amount: true } } },
-    });
-
-    const totalPaid = sumPaidPredictionAmounts(paidPredictions);
+    const { totalPaid } = await getGamePoolStats(gameId);
 
     const winners = await db.prediction.findMany({
       where: { gameId, isPaid: true, isCorrect: true },

@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { PaymentStatusPoller } from "@/app/pagamento/components/PaymentStatusPoller";
 import { PixQrDisplay } from "@/app/pagamento/components/PixQrDisplay";
 import { MatchScoreboard } from "@/components/MatchScoreboard";
+import { BetPoolMeter } from "@/components/BetPoolMeter";
 
 type Game = {
   id: string;
@@ -156,9 +157,12 @@ export default function PalpitarPage() {
     matchDate: game.matchDate,
   };
 
+  const poolMeter = <BetPoolMeter gameId={game.id} />;
+
   if (step === "done") {
     return (
       <div className="space-y-6">
+        {poolMeter}
         <MatchScoreboard
           {...scoreboardProps}
           homeScore={selectedScore?.homeScore}
@@ -187,6 +191,7 @@ export default function PalpitarPage() {
   if (step === "payment" && qr && paymentId) {
     return (
       <div className="flex flex-col gap-6">
+        {poolMeter}
         <MatchScoreboard
           {...scoreboardProps}
           homeScore={selectedScore?.homeScore}
@@ -208,6 +213,7 @@ export default function PalpitarPage() {
         onSubmit={handleFormSubmit}
         className="space-y-6"
       >
+        {poolMeter}
         <MatchScoreboard
           {...scoreboardProps}
           scoreInputs={
