@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/guards";
-import { fetchMatchById } from "@/lib/football-data/client";
-import { betAmountSchema } from "@/lib/validations/bet";
 import { GAME_STATUS } from "@/lib/constants";
+import { dayAlreadyRegistered, findGamesOnDate } from "@/lib/games/game-day";
 import { db } from "@/lib/db";
+import { getMatchDatesForDay, getSlotsForDate } from "@/lib/games/schedule";
 
 const createSchema = z.object({
-  externalMatchId: z.number().int().positive(),
-  betAmount: betAmountSchema,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
 export async function GET() {
@@ -45,31 +44,29 @@ export async function POST(request: Request) {
     await requireAdmin();
     const body = createSchema.parse(await request.json());
 
-    const existing = await db.game.findUnique({
-      where: { externalMatchId: body.externalMatchId },
-    });
-    if (existing) {
-      return NextResponse.json({ error: "Jogo já cadastrado" }, { status: 409 });
+    const slots = getSlotsForDate(body.date);
+    if (slots.length === 0) {
+      return NextResponse.json({ error: "Sem horários para este dia" }, { status: 400 });
     }
 
-    const match = await fetchMatchById(body.externalMatchId);
-    if (!match) {
-      return NextResponse.json({ error: "Partida não encontrada" }, { status: 404 });
+    if (await dayAlreadyRegistered(body.date)) {
+      return NextResponse.json({ error: "Este dia já está cadastrado" }, { status: 409 });
     }
 
-    const game = await db.game.create({
-      data: {
-        externalMatchId: body.externalMatchId,
-        homeTeam: match.homeTeam.name,
-        awayTeam: match.awayTeam.name,
-        matchDate: new Date(match.utcDate),
-        betAmount: body.betAmount,
+    const matchDates = getMatchDatesForDay(body.date);
+    await db.game.createMany({
+      data: matchDates.map((matchDate) => ({
+        homeTeam: "Mandante",
+        awayTeam: "Visitante",
+        matchDate,
+        betAmount: 1,
         status: GAME_STATUS.OPEN,
         isActive: false,
-      },
+      })),
     });
 
-    return NextResponse.json(game);
+    const games = await findGamesOnDate(body.date);
+    return NextResponse.json({ date: body.date, games, count: games.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro";
     const isPrismaOutdated = message.includes("betAmount");

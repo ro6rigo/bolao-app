@@ -1,30 +1,75 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/guards";
-import {
-  getCollectorProfile,
-  validatePayerEmailForCollector,
-} from "@/lib/mercadopago-collector";
-import { createPixPayment } from "@/lib/mercadopago";
-import {
-  getMercadoPagoAccessToken,
-  parseMercadoPagoError,
-} from "@/lib/mercadopago-errors";
+// Pix / Mercado Pago — temporariamente desativado (variáveis de ambiente)
 import { GAME_STATUS } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { closeGameIfBettingExpired } from "@/lib/games/close-game-if-expired";
-import { formatBettingCloseMessage, isBettingOpen } from "@/lib/games/betting-window";
+import {
+  formatBettingCloseMessage,
+  getBetCloseMinutesBefore,
+  isBettingOpen,
+} from "@/lib/games/betting-window";
+import { betLinesFromDetails } from "@/lib/games/bet-lines";
+import {
+  buildDezenaBetDetails,
+  dezenaExtraCodeSchema,
+  normalizeDezenaNumber,
+} from "@/lib/games/dezena-options";
+import {
+  buildGrupoBetDetails,
+  grupoExtraCodeSchema,
+  normalizeGrupoNumber,
+} from "@/lib/games/grupo-options";
+import {
+  buildMilharBetDetails,
+  milharExtraCodeSchema,
+} from "@/lib/games/milhar-options";
+import { isPlayStyle } from "@/lib/games/play-styles";
+import { betAmountSchema } from "@/lib/validations/bet";
+import type { Prisma } from "@prisma/client";
 
-const schema = z.object({
+const baseSchema = z.object({
   gameId: z.string(),
-  homeScore: z.number().int().min(0),
-  awayScore: z.number().int().min(0),
+  playStyle: z.string().refine(isPlayStyle, "Estilo de jogo inválido"),
+  betNumber: z
+    .string()
+    .trim()
+    .regex(/^\d+$/, "Digite apenas números")
+    .max(20, "Número muito longo"),
+  milharAmount: betAmountSchema.optional(),
+  grupoAmount: betAmountSchema.optional(),
+  dezenaAmount: betAmountSchema.optional(),
+  extras: z
+    .array(
+      z.object({
+        code: milharExtraCodeSchema,
+        amount: betAmountSchema,
+      }),
+    )
+    .optional(),
+  grupoExtras: z
+    .array(
+      z.object({
+        code: grupoExtraCodeSchema,
+        amount: betAmountSchema,
+      }),
+    )
+    .optional(),
+  dezenaExtras: z
+    .array(
+      z.object({
+        code: dezenaExtraCodeSchema,
+        amount: betAmountSchema,
+      }),
+    )
+    .optional(),
 });
 
 export async function POST(request: Request) {
   try {
     const session = await requireUser();
-    const body = schema.parse(await request.json());
+    const body = baseSchema.parse(await request.json());
 
     const user = await db.user.findUnique({ where: { id: session.userId } });
     if (!user) {
@@ -38,6 +83,40 @@ export async function POST(request: Request) {
       );
     }
 
+    if (body.playStyle === "MILHAR" && body.milharAmount == null) {
+      return NextResponse.json({ error: "Informe o valor do milhar" }, { status: 400 });
+    }
+
+    if (body.playStyle === "GRUPO" && body.grupoAmount == null) {
+      return NextResponse.json({ error: "Informe o valor do grupo" }, { status: 400 });
+    }
+
+    if (body.playStyle === "GRUPO") {
+      try {
+        normalizeGrupoNumber(body.betNumber);
+      } catch (error) {
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Grupo inválido" },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (body.playStyle === "DEZENA" && body.dezenaAmount == null) {
+      return NextResponse.json({ error: "Informe o valor da dezena" }, { status: 400 });
+    }
+
+    if (body.playStyle === "DEZENA") {
+      try {
+        normalizeDezenaNumber(body.betNumber);
+      } catch (error) {
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Dezena inválida" },
+          { status: 400 },
+        );
+      }
+    }
+
     const game = await db.game.findFirst({
       where: { id: body.gameId, isActive: true, status: GAME_STATUS.OPEN },
     });
@@ -47,61 +126,56 @@ export async function POST(request: Request) {
 
     await closeGameIfBettingExpired(game);
 
-    if (!isBettingOpen(game.matchDate)) {
+    const closeMinutesBefore = getBetCloseMinutesBefore();
+    if (!isBettingOpen(game.matchDate, new Date(), closeMinutesBefore)) {
       return NextResponse.json(
-        { error: formatBettingCloseMessage(game.matchDate) },
+        { error: formatBettingCloseMessage(game.matchDate, closeMinutesBefore) },
         { status: 400 },
       );
     }
 
-    const amount = game.betAmount;
+    const betDetails =
+      body.playStyle === "MILHAR" && body.milharAmount != null
+        ? buildMilharBetDetails(body.betNumber, body.milharAmount, body.extras ?? [])
+        : body.playStyle === "GRUPO" && body.grupoAmount != null
+          ? buildGrupoBetDetails(body.betNumber, body.grupoAmount, body.grupoExtras ?? [])
+          : body.playStyle === "DEZENA" && body.dezenaAmount != null
+            ? buildDezenaBetDetails(body.betNumber, body.dezenaAmount, body.dezenaExtras ?? [])
+            : null;
 
-    const collector = await getCollectorProfile(getMercadoPagoAccessToken());
-    const payerEmailError = validatePayerEmailForCollector(user.email, collector);
-    if (payerEmailError) {
-      return NextResponse.json({ error: payerEmailError }, { status: 400 });
-    }
+    const amount = betDetails?.totalAmount ?? game.betAmount;
 
-    const mpPayment = await createPixPayment({
-      amount,
-      description: `Palpite ${game.homeTeam} x ${game.awayTeam}`,
-      payer: { email: user.email, name: user.name, cpf: user.cpf },
-    });
-
-    const payment = await db.payment.create({
-      data: {
-        userId: user.id,
-        mpPaymentId: mpPayment.mpPaymentId,
-        amount,
-        description: `Palpite ${game.homeTeam} x ${game.awayTeam}`,
-        payerEmail: user.email,
-        payerName: user.name,
-        payerDocument: user.cpf,
-        status: mpPayment.status,
-        statusDetail: mpPayment.statusDetail,
-        qrCode: mpPayment.qrCode,
-        qrCodeBase64: mpPayment.qrCodeBase64,
-      },
-    });
+    const betLineRows =
+      betDetails != null
+        ? betLinesFromDetails(betDetails).map((line) => ({
+            playStyle: line.playStyle,
+            betNumber: line.betNumber,
+            amount: line.amount,
+            prizeFrom: line.prizeFrom,
+            prizeTo: line.prizeTo,
+            source: line.source,
+          }))
+        : [];
 
     const prediction = await db.prediction.create({
       data: {
         userId: user.id,
         gameId: game.id,
-        homeScore: body.homeScore,
-        awayScore: body.awayScore,
-        paymentId: payment.id,
-        isPaid: false,
+        playStyle: body.playStyle,
+        betNumber: body.betNumber,
+        betDetails: betDetails as Prisma.InputJsonValue | undefined,
+        isPaid: true,
+        ...(betLineRows.length > 0
+          ? { betLines: { create: betLineRows } }
+          : {}),
       },
     });
 
     return NextResponse.json({
       predictionId: prediction.id,
-      paymentId: payment.id,
-      status: payment.status,
-      qrCode: payment.qrCode,
-      qrCodeBase64: payment.qrCodeBase64,
-      amount: payment.amount,
+      skipPix: true,
+      amount,
+      betDetails,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -111,7 +185,7 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.json(
-      { error: parseMercadoPagoError(error) },
+      { error: error instanceof Error ? error.message : "Erro ao confirmar palpite" },
       { status: 500 },
     );
   }

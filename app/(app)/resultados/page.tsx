@@ -4,14 +4,22 @@ import { useEffect, useState } from "react";
 
 type GameResult = {
   id: string;
-  homeTeam: string;
-  awayTeam: string;
+  drawCode: string | null;
+  drawResult: string | null;
   homeScore: number | null;
   awayScore: number | null;
   matchDate: string;
   paidPredictions: number;
   winners: number;
 };
+
+function formatGameTime(value: string): string {
+  return new Date(value).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 export default function ResultadosPage() {
   const [results, setResults] = useState<GameResult[]>([]);
@@ -49,17 +57,14 @@ export default function ResultadosPage() {
             {results.map((game) => (
               <tr key={game.id} className="border-b border-zinc-50">
                 <td className="py-3">
-                  <p className="font-medium text-zinc-900">
-                    {game.homeTeam} x {game.awayTeam}
-                    {game.homeScore !== null && game.awayScore !== null && (
-                      <span className="ml-1 text-zinc-600">
-                        ({game.homeScore} x {game.awayScore})
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {new Date(game.matchDate).toLocaleString("pt-BR")}
-                  </p>
+                  <p className="font-medium text-zinc-900">{formatGameTime(game.matchDate)}</p>
+                  {game.drawResult ? (
+                    <p className="text-xs text-zinc-600">{game.drawResult}</p>
+                  ) : game.homeScore !== null && game.awayScore !== null ? (
+                    <p className="text-xs text-zinc-600">
+                      Placar: {game.homeScore} x {game.awayScore}
+                    </p>
+                  ) : null}
                 </td>
                 <td className="py-3">{game.paidPredictions}</td>
                 <td className="py-3">{game.winners}</td>

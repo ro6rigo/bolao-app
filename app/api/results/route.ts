@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/guards";
 import { GAME_STATUS } from "@/lib/constants";
+import { formatGameDrawResult } from "@/lib/jogo-do-bicho/format";
 import { db } from "@/lib/db";
 
 export async function GET() {
@@ -12,8 +13,8 @@ export async function GET() {
       orderBy: { matchDate: "desc" },
       select: {
         id: true,
-        homeTeam: true,
-        awayTeam: true,
+        drawCode: true,
+        drawResults: true,
         homeScore: true,
         awayScore: true,
         matchDate: true,
@@ -38,8 +39,8 @@ export async function GET() {
     return NextResponse.json(
       games.map((game) => ({
         id: game.id,
-        homeTeam: game.homeTeam,
-        awayTeam: game.awayTeam,
+        drawCode: game.drawCode,
+        drawResult: formatGameDrawResult(game.drawCode, game.drawResults),
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         matchDate: game.matchDate,

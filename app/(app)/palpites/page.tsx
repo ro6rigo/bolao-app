@@ -1,17 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatPalpite } from "@/lib/games/play-styles";
+import { formatGameDrawResult } from "@/lib/jogo-do-bicho/format";
 
 type Prediction = {
   id: string;
-  homeScore: number;
-  awayScore: number;
+  homeScore: number | null;
+  awayScore: number | null;
+  playStyle: string | null;
+  betNumber: string | null;
   isPaid: boolean;
   isCorrect: boolean | null;
   game: {
     homeTeam: string;
     awayTeam: string;
     matchDate: string;
+    drawCode: string | null;
+    drawResults: unknown;
     homeScore: number | null;
     awayScore: number | null;
     status: string;
@@ -70,17 +76,27 @@ export default function PalpitesPage() {
               className={`rounded-xl bg-white p-4 shadow-sm ${result.borderClass}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="font-medium">{p.game.homeTeam} x {p.game.awayTeam}</p>
+                <p className="font-medium">
+                  {new Date(p.game.matchDate).toLocaleString("pt-BR", {
+                    timeZone: "America/Sao_Paulo",
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </p>
                 <span className={`text-sm font-medium ${result.className}`}>{result.text}</span>
               </div>
               <p className="mt-1 text-sm text-zinc-600">
-                Seu palpite: {p.homeScore} x {p.awayScore}
+                Seu palpite: {formatPalpite(p)}
               </p>
-              {p.game.homeScore !== null && p.game.awayScore !== null && (
+              {formatGameDrawResult(p.game.drawCode, p.game.drawResults) ? (
+                <p className="text-sm text-zinc-600">
+                  Resultado: {formatGameDrawResult(p.game.drawCode, p.game.drawResults)}
+                </p>
+              ) : p.game.homeScore !== null && p.game.awayScore !== null ? (
                 <p className="text-sm text-zinc-600">
                   Placar real: {p.game.homeScore} x {p.game.awayScore}
                 </p>
-              )}
+              ) : null}
               {p.payment?.amount != null && (
                 <p className="text-sm text-zinc-600">
                   Valor:{" "}

@@ -1,0 +1,2 @@
+ALTER TABLE "Game" ADD COLUMN "drawCode" TEXT;
+ALTER TABLE "Game" ADD COLUMN "drawResults" JSONB;

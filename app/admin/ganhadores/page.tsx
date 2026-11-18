@@ -1,20 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatPalpite } from "@/lib/games/play-styles";
+import { formatDrawSummary } from "@/lib/jogo-do-bicho/check-prediction";
+import { EXTRACTION_LABELS, type ExtractionCode } from "@/lib/jogo-do-bicho/extractions";
 
 type Game = {
   id: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number | null;
-  awayScore: number | null;
+  matchDate: string;
   status: string;
 };
 
 type Winner = {
   id: string;
-  homeScore: number;
-  awayScore: number;
+  homeScore: number | null;
+  awayScore: number | null;
+  playStyle: string | null;
+  betNumber: string | null;
   prize: number;
   user: { name: string; phone: string | null };
 };
@@ -28,6 +30,14 @@ type WinnersResponse = {
 
 function formatCurrency(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatGameTime(value: string): string {
+  return new Date(value).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 export default function AdminGanhadoresPage() {
@@ -55,7 +65,14 @@ export default function AdminGanhadoresPage() {
       setMessage(data.error);
       return;
     }
-    setMessage(`Placar atualizado: ${data.homeScore} x ${data.awayScore}`);
+    if (typeof data.drawCode === "string" && Array.isArray(data.prizes)) {
+      const label = EXTRACTION_LABELS[data.drawCode as ExtractionCode] ?? data.drawCode;
+      setMessage(`Resultado ${label}: ${formatDrawSummary(data.prizes)}`);
+    } else if (data.homeScore != null && data.awayScore != null) {
+      setMessage(`Placar atualizado: ${data.homeScore} x ${data.awayScore}`);
+    } else {
+      setMessage("Resultado atualizado.");
+    }
     await loadWinners();
     const gamesRes = await fetch("/api/admin/games");
     const gamesData = await gamesRes.json();
@@ -88,14 +105,13 @@ export default function AdminGanhadoresPage() {
           <option value="">Selecione o jogo</option>
           {games.map((g) => (
             <option key={g.id} value={g.id}>
-              {g.homeTeam} x {g.awayTeam} — {g.status}
-              {g.homeScore !== null ? ` (${g.homeScore}x${g.awayScore})` : ""}
+              {formatGameTime(g.matchDate)} — {g.status}
             </option>
           ))}
         </select>
 
         <button onClick={syncResult} className="rounded-lg bg-zinc-900 px-4 py-2 text-white">
-          Atualizar placar (football-data.org)
+          Atualizar resultado (Deu no Poste)
         </button>
 
         {message && <p className="text-sm text-green-700">{message}</p>}
@@ -117,7 +133,7 @@ export default function AdminGanhadoresPage() {
           <ul className="space-y-2">
             {winners.map((w) => (
               <li key={w.id} className="border-b border-zinc-50 pb-2">
-                {w.user.name} ({w.user.phone ?? "—"}) — palpite {w.homeScore} x {w.awayScore} —{" "}
+                {w.user.name} ({w.user.phone ?? "—"}) — palpite {formatPalpite(w)} —{" "}
                 {formatCurrency(w.prize)}
               </li>
             ))}

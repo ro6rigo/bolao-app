@@ -17,10 +17,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     const { id } = await context.params;
     const body = updateSchema.parse(await request.json());
 
-    if (body.isActive) {
-      await db.game.updateMany({ where: { isActive: true }, data: { isActive: false } });
-    }
-
     const game = await db.game.update({
       where: { id },
       data: body,

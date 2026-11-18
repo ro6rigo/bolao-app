@@ -1,4 +1,4 @@
-const DEFAULT_CLOSE_MINUTES = 30;
+const DEFAULT_CLOSE_MINUTES = 10;
 
 export function getBetCloseMinutesBefore(): number {
   const raw = process.env.BET_CLOSE_MINUTES_BEFORE?.trim();
@@ -12,17 +12,27 @@ export function getBetCloseMinutesBefore(): number {
   return minutes;
 }
 
-export function getBettingClosesAt(matchDate: Date): Date {
-  const offsetMs = getBetCloseMinutesBefore() * 60 * 1000;
+export function getBettingClosesAt(
+  matchDate: Date,
+  closeMinutesBefore = getBetCloseMinutesBefore(),
+): Date {
+  const offsetMs = closeMinutesBefore * 60 * 1000;
   return new Date(matchDate.getTime() - offsetMs);
 }
 
-export function isBettingOpen(matchDate: Date, now = new Date()): boolean {
-  return now.getTime() < getBettingClosesAt(matchDate).getTime();
+export function isBettingOpen(
+  matchDate: Date,
+  now = new Date(),
+  closeMinutesBefore = getBetCloseMinutesBefore(),
+): boolean {
+  return now.getTime() < getBettingClosesAt(matchDate, closeMinutesBefore).getTime();
 }
 
-export function formatBettingCloseMessage(matchDate: Date): string {
-  const closesAt = getBettingClosesAt(matchDate);
+export function formatBettingCloseMessage(
+  matchDate: Date,
+  closeMinutesBefore = getBetCloseMinutesBefore(),
+): string {
+  const closesAt = getBettingClosesAt(matchDate, closeMinutesBefore);
   const formatted = closesAt.toLocaleString("pt-BR", {
     timeZone: "America/Sao_Paulo",
     dateStyle: "short",

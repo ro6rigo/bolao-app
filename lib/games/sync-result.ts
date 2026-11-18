@@ -4,13 +4,57 @@ import {
   getFullTimeScore,
   isMatchFinished,
 } from "@/lib/football-data/client";
+import {
+  isDezenaBetCorrect,
+  isGrupoBetCorrect,
+  isMilharBetCorrect,
+  isMilharBetLineCorrect,
+  isPredictionCorrect,
+} from "@/lib/jogo-do-bicho/check-prediction";
+import { fetchExtractionForDate } from "@/lib/jogo-do-bicho/deu-no-poste";
+import { extractionCodeForTime, EXTRACTION_LABELS } from "@/lib/jogo-do-bicho/extractions";
+import type { DrawPrize } from "@/lib/jogo-do-bicho/types";
+import { formatSlotInSaoPaulo } from "@/lib/games/schedule";
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 export async function syncGameResult(gameId: string) {
   const game = await db.game.findUnique({ where: { id: gameId } });
   if (!game) throw new Error("Jogo não encontrado");
 
-  const match = await fetchMatchById(game.externalMatchId);
+  if (game.externalMatchId != null) {
+    return syncFootballGameResult(gameId, game.externalMatchId);
+  }
+
+  const { date, time } = formatSlotInSaoPaulo(game.matchDate);
+  const drawCode = extractionCodeForTime(time);
+  if (!drawCode) {
+    throw new Error(`Horário ${time} não tem extração mapeada no Deu no Poste`);
+  }
+
+  const { prizes } = await fetchExtractionForDate(date, drawCode);
+
+  await db.game.update({
+    where: { id: gameId },
+    data: {
+      drawCode,
+      drawResults: prizes as unknown as Prisma.InputJsonValue,
+      status: GAME_STATUS.FINISHED,
+      isActive: false,
+    },
+  });
+
+  await scorePredictions(gameId, prizes);
+
+  return {
+    drawCode,
+    drawLabel: EXTRACTION_LABELS[drawCode],
+    prizes,
+  };
+}
+
+async function syncFootballGameResult(gameId: string, externalMatchId: number) {
+  const match = await fetchMatchById(externalMatchId);
   if (!match) throw new Error("Partida não encontrada na football-data.org");
 
   if (!isMatchFinished(match.status)) {
@@ -45,4 +89,59 @@ export async function syncGameResult(gameId: string) {
   }
 
   return { homeScore, awayScore };
+}
+
+function scoreStructuredPrediction(
+  prediction: {
+    playStyle: string | null;
+    betDetails: unknown;
+    betLines: Array<{
+      playStyle: string;
+      betNumber: string;
+      prizeFrom: number;
+      prizeTo: number;
+    }>;
+  },
+  prizes: DrawPrize[],
+): boolean {
+  if (prediction.betLines.length > 0) {
+    return prediction.betLines.some((line) => isMilharBetLineCorrect(line, prizes));
+  }
+  if (!prediction.betDetails) return false;
+  if (prediction.playStyle === "GRUPO") {
+    return isGrupoBetCorrect(prediction.betDetails, prizes);
+  }
+  if (prediction.playStyle === "DEZENA") {
+    return isDezenaBetCorrect(prediction.betDetails, prizes);
+  }
+  return isMilharBetCorrect(prediction.betDetails, prizes);
+}
+
+async function scorePredictions(gameId: string, prizes: DrawPrize[]) {
+  const predictions = await db.prediction.findMany({
+    where: { gameId, isPaid: true },
+    include: { betLines: true },
+  });
+
+  for (const prediction of predictions) {
+    if (!prediction.playStyle || !prediction.betNumber) {
+      await db.prediction.update({
+        where: { id: prediction.id },
+        data: { isCorrect: false },
+      });
+      continue;
+    }
+
+    const isCorrect =
+      prediction.playStyle === "MILHAR" ||
+        prediction.playStyle === "GRUPO" ||
+        prediction.playStyle === "DEZENA"
+        ? scoreStructuredPrediction(prediction, prizes)
+        : isPredictionCorrect(prediction.playStyle, prediction.betNumber, prizes);
+
+    await db.prediction.update({
+      where: { id: prediction.id },
+      data: { isCorrect },
+    });
+  }
 }

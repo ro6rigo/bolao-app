@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatPalpite } from "@/lib/games/play-styles";
 
 type Prediction = {
   id: string;
-  homeScore: number;
-  awayScore: number;
+  homeScore: number | null;
+  awayScore: number | null;
+  playStyle: string | null;
+  betNumber: string | null;
   isPaid: boolean;
   isCorrect: boolean | null;
   user: { name: string; email: string };
@@ -46,7 +49,7 @@ export default function AdminPalpitesPage() {
               <tr key={p.id} className="border-b border-zinc-50">
                 <td className="py-2">{p.user.email}</td>
                 <td className="py-2">{p.game.homeTeam} x {p.game.awayTeam}</td>
-                <td className="py-2">{p.homeScore} x {p.awayScore}</td>
+                <td className="py-2">{formatPalpite(p)}</td>
                 <td className="py-2">
                   {p.payment?.amount != null
                     ? p.payment.amount.toLocaleString("pt-BR", {
