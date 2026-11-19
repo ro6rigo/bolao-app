@@ -455,7 +455,11 @@ export default function PalpitarPage() {
               setPlayStyle("");
               setBetNumber("");
               setMilharAmount("");
-              setMilharExtras(emptyExtraState());
+              setMilharExtras(emptyMilharExtraState());
+              setGrupoAmount("");
+              setGrupoExtras(emptyGrupoExtraState());
+              setDezenaAmount("");
+              setDezenaExtras(emptyDezenaExtraState());
               setError(null);
               void loadActiveGames();
             }}
