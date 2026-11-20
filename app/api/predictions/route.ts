@@ -26,6 +26,12 @@ import {
   milharExtraCodeSchema,
 } from "@/lib/games/milhar-options";
 import { isPlayStyle } from "@/lib/games/play-styles";
+import { buildMilharCentenaBetDetails } from "@/lib/games/milhar-centena-options";
+import {
+  buildSimpleBetDetails,
+  isPlainSimpleStakeStyle,
+  isStructuredPalpiteStyle,
+} from "@/lib/games/simple-bet-details";
 import { betAmountSchema } from "@/lib/validations/bet";
 import type { Prisma } from "@prisma/client";
 
@@ -40,6 +46,7 @@ const baseSchema = z.object({
   milharAmount: betAmountSchema.optional(),
   grupoAmount: betAmountSchema.optional(),
   dezenaAmount: betAmountSchema.optional(),
+  stakeAmount: betAmountSchema.optional(),
   extras: z
     .array(
       z.object({
@@ -117,6 +124,10 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!isStructuredPalpiteStyle(body.playStyle) && body.stakeAmount == null) {
+      return NextResponse.json({ error: "Informe o valor da aposta" }, { status: 400 });
+    }
+
     const game = await db.game.findFirst({
       where: { id: body.gameId, isActive: true, status: GAME_STATUS.OPEN },
     });
@@ -141,9 +152,17 @@ export async function POST(request: Request) {
           ? buildGrupoBetDetails(body.betNumber, body.grupoAmount, body.grupoExtras ?? [])
           : body.playStyle === "DEZENA" && body.dezenaAmount != null
             ? buildDezenaBetDetails(body.betNumber, body.dezenaAmount, body.dezenaExtras ?? [])
-            : null;
+            : body.stakeAmount != null && body.playStyle === "MILHAR E CENTENA"
+              ? buildMilharCentenaBetDetails(body.betNumber, body.stakeAmount)
+              : body.stakeAmount != null && isPlainSimpleStakeStyle(body.playStyle)
+                ? buildSimpleBetDetails(body.playStyle, body.betNumber, body.stakeAmount)
+                : null;
 
-    const amount = betDetails?.totalAmount ?? game.betAmount;
+    if (!betDetails) {
+      return NextResponse.json({ error: "Informe o valor da aposta" }, { status: 400 });
+    }
+
+    const amount = betDetails.totalAmount;
 
     const betLineRows =
       betDetails != null

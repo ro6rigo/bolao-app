@@ -9,6 +9,7 @@
     "db:migrate:fix": "powershell -ExecutionPolicy Bypass -File scripts/prune-broken-migrations.ps1",
     "start": "next start",
     "lint": "eslint",
+    "test:draw-match": "tsx --test lib/jogo-do-bicho/draw-match.test.ts",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",

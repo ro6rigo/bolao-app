@@ -7,7 +7,7 @@ export default function HomePage() {
         <div className="text-center">
           <h1 className="text-3xl font-semibold text-zinc-900">Bolão App</h1>
           <p className="mt-3 text-zinc-600">
-            Palpite nos jogos da Seleção e pague via Pix.
+            Palpite nos jogos e pague via Pix.
           </p>
         </div>
         <div className="flex w-full flex-col gap-3 sm:flex-row">

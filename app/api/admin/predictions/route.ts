@@ -8,7 +8,7 @@ export async function GET() {
     const predictions = await db.prediction.findMany({
       include: {
         user: { select: { name: true, email: true } },
-        game: { select: { homeTeam: true, awayTeam: true, matchDate: true } },
+        game: { select: { matchDate: true } },
         payment: { select: { status: true, amount: true } },
       },
       orderBy: { id: "desc" },

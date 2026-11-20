@@ -24,6 +24,15 @@ import {
   buildMilharBetDetails,
   formatMilharBetSummary,
 } from "@/lib/games/milhar-options";
+import {
+  buildMilharCentenaBetDetails,
+  formatMilharCentenaBetSummary,
+} from "@/lib/games/milhar-centena-options";
+import {
+  buildSimpleBetDetails,
+  formatSimpleBetSummary,
+  isStructuredPalpiteStyle,
+} from "@/lib/games/simple-bet-details";
 import { PLAY_STYLES, type PlayStyle } from "@/lib/games/play-styles";
 import { BET_AMOUNT_MAX, BET_AMOUNT_MIN } from "@/lib/validations/bet";
 
@@ -123,6 +132,7 @@ export default function PalpitarPage() {
   const [grupoExtras, setGrupoExtras] = useState(emptyGrupoExtraState);
   const [dezenaAmount, setDezenaAmount] = useState("");
   const [dezenaExtras, setDezenaExtras] = useState(emptyDezenaExtraState);
+  const [stakeAmount, setStakeAmount] = useState("");
   const [selectedBet, setSelectedBet] = useState<SelectedBet | null>(null);
 
   const [loadingGame, setLoadingGame] = useState(true);
@@ -287,6 +297,21 @@ export default function PalpitarPage() {
     return { dezenaAmount: mainAmount, dezenaExtras: dezenaExtrasPayload };
   }
 
+  function buildSimpleStakePayload():
+    | { stakeAmount: number }
+    | { error: string } {
+    const amount = parseAmount(stakeAmount);
+    if (amount == null) {
+      return { error: "Informe o valor da aposta" };
+    }
+    if (amount < BET_AMOUNT_MIN || amount > BET_AMOUNT_MAX) {
+      return {
+        error: `Valor entre ${formatCurrency(BET_AMOUNT_MIN)} e ${formatCurrency(BET_AMOUNT_MAX)}`,
+      };
+    }
+    return { stakeAmount: amount };
+  }
+
   async function submitPrediction() {
     if (!game || !playStyle || !betNumber.trim()) return;
     setError(null);
@@ -349,6 +374,24 @@ export default function PalpitarPage() {
       );
     }
 
+    if (playStyle && !isStructuredPalpiteStyle(playStyle)) {
+      const stake = buildSimpleStakePayload();
+      if ("error" in stake) {
+        setError(stake.error);
+        setSubmitting(false);
+        return;
+      }
+      payload = { ...payload, stakeAmount: stake.stakeAmount };
+      betSummary =
+        playStyle === "MILHAR E CENTENA"
+          ? formatMilharCentenaBetSummary(
+              buildMilharCentenaBetDetails(betNumber.trim(), stake.stakeAmount),
+            )
+          : formatSimpleBetSummary(
+              buildSimpleBetDetails(playStyle, betNumber.trim(), stake.stakeAmount),
+            );
+    }
+
     try {
       const res = await fetch("/api/predictions", {
         method: "POST",
@@ -401,6 +444,14 @@ export default function PalpitarPage() {
       const dezena = buildDezenaPayload();
       if ("error" in dezena) {
         setError(dezena.error);
+        return;
+      }
+    }
+
+    if (playStyle && !isStructuredPalpiteStyle(playStyle)) {
+      const stake = buildSimpleStakePayload();
+      if ("error" in stake) {
+        setError(stake.error);
         return;
       }
     }
@@ -460,6 +511,7 @@ export default function PalpitarPage() {
               setGrupoExtras(emptyGrupoExtraState());
               setDezenaAmount("");
               setDezenaExtras(emptyDezenaExtraState());
+              setStakeAmount("");
               setError(null);
               void loadActiveGames();
             }}
@@ -545,6 +597,7 @@ export default function PalpitarPage() {
                 setGrupoExtras(emptyGrupoExtraState());
                 setDezenaAmount("");
                 setDezenaExtras(emptyDezenaExtraState());
+                setStakeAmount("");
                 setError(null);
               }}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
@@ -816,22 +869,36 @@ export default function PalpitarPage() {
             playStyle !== "MILHAR" &&
             playStyle !== "GRUPO" &&
             playStyle !== "DEZENA" && (
-            <label className="flex flex-col gap-1 text-sm text-zinc-800">
-              Número
-              <input
-                name="betNumber"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                required
-                pattern="[0-9]+"
-                maxLength={20}
-                value={betNumber}
-                onChange={(event) => setBetNumber(event.target.value.replace(/\D/g, ""))}
-                placeholder="Digite o número"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg tracking-widest text-zinc-900"
-              />
-            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm text-zinc-800">
+                Número
+                <input
+                  name="betNumber"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  required
+                  pattern="[0-9]+"
+                  maxLength={20}
+                  value={betNumber}
+                  onChange={(event) => setBetNumber(event.target.value.replace(/\D/g, ""))}
+                  placeholder="Digite o número"
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-lg tracking-widest text-zinc-900"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-zinc-800">
+                Valor (R$)
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  value={stakeAmount}
+                  onChange={(event) => setStakeAmount(event.target.value.replace(/[^\d,.]/g, ""))}
+                  placeholder="0,00"
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
+                />
+              </label>
+            </div>
           )}
         </div>
 
@@ -910,6 +977,20 @@ export default function PalpitarPage() {
                         dezena.dezenaExtras,
                       ),
                     );
+                  })()}
+                </p>
+              ) : playStyle && !isStructuredPalpiteStyle(playStyle) ? (
+                <p>
+                  {(() => {
+                    const stake = buildSimpleStakePayload();
+                    if ("error" in stake) return null;
+                    return playStyle === "MILHAR E CENTENA"
+                      ? formatMilharCentenaBetSummary(
+                          buildMilharCentenaBetDetails(betNumber.trim(), stake.stakeAmount),
+                        )
+                      : formatSimpleBetSummary(
+                          buildSimpleBetDetails(playStyle, betNumber.trim(), stake.stakeAmount),
+                        );
                   })()}
                 </p>
               ) : betNumber ? (

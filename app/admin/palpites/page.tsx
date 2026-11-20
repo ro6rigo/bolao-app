@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatPredictionTotalAmount } from "@/lib/games/prediction-stake";
 import { formatPalpite } from "@/lib/games/play-styles";
 
 type Prediction = {
@@ -9,12 +10,21 @@ type Prediction = {
   awayScore: number | null;
   playStyle: string | null;
   betNumber: string | null;
+  betDetails: unknown;
   isPaid: boolean;
   isCorrect: boolean | null;
   user: { name: string; email: string };
-  game: { homeTeam: string; awayTeam: string; matchDate: string };
+  game: { matchDate: string };
   payment: { status: string; amount: number } | null;
 };
+
+function formatGameSlot(iso: string): string {
+  return new Date(iso).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 export default function AdminPalpitesPage() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -37,7 +47,7 @@ export default function AdminPalpitesPage() {
           <thead>
             <tr className="border-b text-left text-zinc-500">
               <th className="pb-2">E-mail</th>
-              <th className="pb-2">Jogo</th>
+              <th className="pb-2">Dia e horário</th>
               <th className="pb-2">Palpite</th>
               <th className="pb-2">Valor</th>
               <th className="pb-2">Pago</th>
@@ -48,16 +58,11 @@ export default function AdminPalpitesPage() {
             {predictions.map((p) => (
               <tr key={p.id} className="border-b border-zinc-50">
                 <td className="py-2">{p.user.email}</td>
-                <td className="py-2">{p.game.homeTeam} x {p.game.awayTeam}</td>
-                <td className="py-2">{formatPalpite(p)}</td>
-                <td className="py-2">
-                  {p.payment?.amount != null
-                    ? p.payment.amount.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })
-                    : "—"}
+                <td className="py-2 whitespace-nowrap">
+                  {p.game?.matchDate ? formatGameSlot(p.game.matchDate) : "—"}
                 </td>
+                <td className="py-2">{formatPalpite(p)}</td>
+                <td className="py-2">{formatPredictionTotalAmount(p)}</td>
                 <td className="py-2">{p.isPaid ? "Sim" : "Não"}</td>
                 <td className="py-2">
                   {p.isCorrect === null ? "—" : p.isCorrect ? "Sim" : "Não"}

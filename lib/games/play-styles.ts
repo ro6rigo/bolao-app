@@ -1,6 +1,11 @@
 import { formatDezenaBetSummary, parseDezenaBetDetails } from "@/lib/games/dezena-options";
 import { formatGrupoBetSummary, parseGrupoBetDetails } from "@/lib/games/grupo-options";
+import {
+  formatMilharCentenaBetSummary,
+  parseMilharCentenaBetDetails,
+} from "@/lib/games/milhar-centena-options";
 import { formatMilharBetSummary, parseMilharBetDetails } from "@/lib/games/milhar-options";
+import { formatSimpleBetSummary, parseSimpleBetDetails } from "@/lib/games/simple-bet-details";
 
 export const PLAY_STYLES = [
   "MILHAR",
@@ -50,6 +55,14 @@ export function formatPalpite(prediction: {
     const summary = formatDezenaBetSummary(parseDezenaBetDetails(prediction.betDetails));
     if (summary) return summary;
   }
+
+  const milharCentena = formatMilharCentenaBetSummary(
+    parseMilharCentenaBetDetails(prediction.betDetails),
+  );
+  if (milharCentena) return milharCentena;
+
+  const simple = formatSimpleBetSummary(parseSimpleBetDetails(prediction.betDetails));
+  if (simple) return simple;
 
   if (prediction.playStyle && prediction.betNumber) {
     return `${prediction.playStyle} — ${prediction.betNumber}`;

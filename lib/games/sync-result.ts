@@ -8,9 +8,12 @@ import {
   isDezenaBetCorrect,
   isGrupoBetCorrect,
   isMilharBetCorrect,
+  isMilharBetEntryCorrect,
   isMilharBetLineCorrect,
   isPredictionCorrect,
 } from "@/lib/jogo-do-bicho/check-prediction";
+import { parseMilharCentenaBetDetails } from "@/lib/games/milhar-centena-options";
+import { parseSimpleBetDetails } from "@/lib/games/simple-bet-details";
 import { fetchExtractionForDate } from "@/lib/jogo-do-bicho/deu-no-poste";
 import { extractionCodeForTime, EXTRACTION_LABELS } from "@/lib/jogo-do-bicho/extractions";
 import type { DrawPrize } from "@/lib/jogo-do-bicho/types";
@@ -114,6 +117,17 @@ function scoreStructuredPrediction(
   if (prediction.playStyle === "DEZENA") {
     return isDezenaBetCorrect(prediction.betDetails, prizes);
   }
+  if (prediction.playStyle === "MILHAR") {
+    return isMilharBetCorrect(prediction.betDetails, prizes);
+  }
+  const milharCentena = parseMilharCentenaBetDetails(prediction.betDetails);
+  if (milharCentena) {
+    return milharCentena.entries.some((entry) => isMilharBetEntryCorrect(entry, prizes));
+  }
+  const simple = parseSimpleBetDetails(prediction.betDetails);
+  if (simple) {
+    return simple.entries.some((entry) => isMilharBetEntryCorrect(entry, prizes));
+  }
   return isMilharBetCorrect(prediction.betDetails, prizes);
 }
 
@@ -133,9 +147,7 @@ async function scorePredictions(gameId: string, prizes: DrawPrize[]) {
     }
 
     const isCorrect =
-      prediction.playStyle === "MILHAR" ||
-        prediction.playStyle === "GRUPO" ||
-        prediction.playStyle === "DEZENA"
+      prediction.betLines.length > 0 || prediction.betDetails
         ? scoreStructuredPrediction(prediction, prizes)
         : isPredictionCorrect(prediction.playStyle, prediction.betNumber, prizes);
 

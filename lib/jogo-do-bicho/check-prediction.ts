@@ -1,4 +1,14 @@
 import type { DrawPrize } from "@/lib/jogo-do-bicho/types";
+import {
+  centenaFromDrawMilhar,
+  dezenaFromDrawMilhar,
+  matchesCentenaBet,
+  matchesDezenaBet,
+  matchesGrupoBet,
+  matchesMilharBet,
+  normalizeDrawMilhar,
+  normalizeGrupoValue,
+} from "@/lib/jogo-do-bicho/draw-match";
 import { parseDezenaBetDetails } from "@/lib/games/dezena-options";
 import { parseGrupoBetDetails } from "@/lib/games/grupo-options";
 import { parseMilharBetDetails, type MilharBetEntry } from "@/lib/games/milhar-options";
@@ -22,7 +32,7 @@ function sameLength(value: string, length: number): string {
 
 function isInvertedMilhar(bet: string, milhar: string): boolean {
   const a = sameLength(bet, 4).split("").sort().join("");
-  const b = milhar.split("").sort().join("");
+  const b = normalizeDrawMilhar(milhar).split("").sort().join("");
   return a === b;
 }
 
@@ -34,38 +44,40 @@ export function isPredictionCorrectOnPrizes(
 ): boolean {
   if (prizes.length === 0) return false;
 
-  const milhars = prizes.map((p) => p.milhar.padStart(4, "0"));
-  const centenas = milhars.map((m) => m.slice(-3));
-  const dezenas = milhars.map((m) => m.slice(-2));
-  const grupos = prizes.map((p) => p.grupo);
-
   const bet = digitsOnly(betNumber);
   if (!bet) return false;
 
   switch (playStyle) {
     case "MILHAR":
-      return milhars.includes(sameLength(bet, 4));
+      return prizes.some((prize) => matchesMilharBet(betNumber, prize));
     case "CENTENA":
-      return centenas.includes(sameLength(bet, 3));
-    case "MILHAR E CENTENA":
-      return (
-        milhars.includes(sameLength(bet, 4)) || centenas.includes(sameLength(bet, 3))
+      return prizes.some((prize) => matchesCentenaBet(betNumber, prize));
+    case "MILHAR E CENTENA": {
+      const milhar = sameLength(bet, 4);
+      const centena = sameLength(bet, 3);
+      return prizes.some(
+        (prize) =>
+          normalizeDrawMilhar(prize.milhar) === milhar ||
+          centenaFromDrawMilhar(prize.milhar) === centena,
       );
+    }
     case "DEZENA":
-      return dezenas.includes(sameLength(bet, 2));
+      return prizes.some((prize) => matchesDezenaBet(betNumber, prize));
     case "GRUPO":
-      return grupos.includes(sameLength(bet, 1)) || grupos.includes(sameLength(bet, 2));
+      return prizes.some((prize) => matchesGrupoBet(betNumber, prize));
     case "MILHAR INVERTIDA":
-      return milhars.some((m) => isInvertedMilhar(bet, m));
+      return prizes.some((prize) => isInvertedMilhar(bet, prize.milhar));
     case "MILHAR E CENTENA INV":
-      return (
-        milhars.some((m) => isInvertedMilhar(bet, m)) ||
-        centenas.includes(sameLength(bet, 3))
+      return prizes.some(
+        (prize) =>
+          isInvertedMilhar(bet, prize.milhar) ||
+          centenaFromDrawMilhar(prize.milhar) === sameLength(bet, 3),
       );
     case "DEZENA INVERTIDA":
-      return dezenas.some((d) => {
+      return prizes.some((prize) => {
+        const draw = dezenaFromDrawMilhar(prize.milhar);
         const a = sameLength(bet, 2).split("").sort().join("");
-        const b = d.split("").sort().join("");
+        const b = draw.split("").sort().join("");
         return a === b;
       });
   }
@@ -121,3 +133,6 @@ export function formatDrawSummary(prizes: DrawPrize[]): string {
   if (main.length === 0) return "sem prêmios";
   return main.map((p) => `${p.milhar}-${p.grupo}`).join(", ");
 }
+
+/** Exportado para testes e documentação da regra de grupo. */
+export { normalizeGrupoValue };
