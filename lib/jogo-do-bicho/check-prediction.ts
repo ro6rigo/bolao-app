@@ -4,8 +4,11 @@ import {
   dezenaFromDrawMilhar,
   matchesCentenaBet,
   matchesDezenaBet,
+  matchesDezenaInvertidaBet,
   matchesGrupoBet,
   matchesMilharBet,
+  matchesMilharECentenaInvBet,
+  matchesMilharInvertidaBet,
   normalizeDrawMilhar,
   normalizeGrupoValue,
 } from "@/lib/jogo-do-bicho/draw-match";
@@ -28,12 +31,6 @@ function digitsOnly(value: string): string {
 
 function sameLength(value: string, length: number): string {
   return digitsOnly(value).padStart(length, "0").slice(-length);
-}
-
-function isInvertedMilhar(bet: string, milhar: string): boolean {
-  const a = sameLength(bet, 4).split("").sort().join("");
-  const b = normalizeDrawMilhar(milhar).split("").sort().join("");
-  return a === b;
 }
 
 /** Conferência exata sobre a lista de prêmios já filtrada (faixa). */
@@ -66,20 +63,11 @@ export function isPredictionCorrectOnPrizes(
     case "GRUPO":
       return prizes.some((prize) => matchesGrupoBet(betNumber, prize));
     case "MILHAR INVERTIDA":
-      return prizes.some((prize) => isInvertedMilhar(bet, prize.milhar));
+      return prizes.some((prize) => matchesMilharInvertidaBet(betNumber, prize));
     case "MILHAR E CENTENA INV":
-      return prizes.some(
-        (prize) =>
-          isInvertedMilhar(bet, prize.milhar) ||
-          centenaFromDrawMilhar(prize.milhar) === sameLength(bet, 3),
-      );
+      return prizes.some((prize) => matchesMilharECentenaInvBet(betNumber, prize));
     case "DEZENA INVERTIDA":
-      return prizes.some((prize) => {
-        const draw = dezenaFromDrawMilhar(prize.milhar);
-        const a = sameLength(bet, 2).split("").sort().join("");
-        const b = draw.split("").sort().join("");
-        return a === b;
-      });
+      return prizes.some((prize) => matchesDezenaInvertidaBet(betNumber, prize));
   }
 
   return false;

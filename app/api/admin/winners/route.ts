@@ -18,7 +18,10 @@ export async function GET(request: Request) {
 
     const paidPredictions = await db.prediction.findMany({
       where: { gameId, isPaid: true },
-      include: { payment: { select: { amount: true } } },
+      select: {
+        payment: { select: { amount: true } },
+        betDetails: true,
+      },
     });
 
     const totalPaid = sumPaidPredictionAmounts(paidPredictions);

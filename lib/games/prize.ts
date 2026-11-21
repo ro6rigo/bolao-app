@@ -1,3 +1,5 @@
+import { predictionTotalAmount } from "@/lib/games/prediction-stake";
+
 export const PRIZE_POOL_SHARE = 0.8;
 
 export function calculatePrizePerWinner(
@@ -9,7 +11,10 @@ export function calculatePrizePerWinner(
 }
 
 export function sumPaidPredictionAmounts(
-  predictions: Array<{ payment: { amount: number } | null }>,
+  predictions: Array<{ payment: { amount: number } | null; betDetails?: unknown }>,
 ): number {
-  return predictions.reduce((sum, prediction) => sum + (prediction.payment?.amount ?? 0), 0);
+  return predictions.reduce(
+    (sum, prediction) => sum + (predictionTotalAmount(prediction) ?? 0),
+    0,
+  );
 }

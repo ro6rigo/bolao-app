@@ -1,3 +1,4 @@
+import { centenaReversedInv, milharReversed } from "@/lib/games/milhar-options";
 import type { DrawPrize } from "@/lib/jogo-do-bicho/types";
 
 function digitsOnly(value: string): string {
@@ -63,6 +64,64 @@ export function matchesDezenaBet(betNumber: string, prize: DrawPrize): boolean {
   const bet = normalizeDezenaBet(betNumber);
   if (!bet) return false;
   return dezenaFromDrawMilhar(prize.milhar) === bet;
+}
+
+/** Dezena invertida do palpite (ex.: 29 → 92). */
+export function dezenaInvertidaFromBet(betNumber: string): string | null {
+  const bet = normalizeDezenaBet(betNumber);
+  if (!bet) return null;
+  return bet.split("").reverse().join("");
+}
+
+/**
+ * Dezena invertida: a dezena sorteadA deve ser o palpite com dígitos invertidos
+ * (ex.: palpite 29 → acerta milhar 1292-12, dezena 92; não acerta 5629-8, dezena 29).
+ */
+export function matchesDezenaInvertidaBet(betNumber: string, prize: DrawPrize): boolean {
+  const target = dezenaInvertidaFromBet(betNumber);
+  if (!target) return false;
+  return dezenaFromDrawMilhar(prize.milhar) === target;
+}
+
+/** Milhar invertida: milhar sorteado = palpite com 4 dígitos invertidos (1234 → 4321). */
+export function milharInvertidaTargetFromBet(betNumber: string): string | null {
+  try {
+    return milharReversed(betNumber);
+  } catch {
+    return null;
+  }
+}
+
+export function matchesMilharInvertidaBet(betNumber: string, prize: DrawPrize): boolean {
+  const target = milharInvertidaTargetFromBet(betNumber);
+  if (!target) return false;
+  return normalizeDrawMilhar(prize.milhar) === target;
+}
+
+/**
+ * Centena invertida (palpite em milhar de 4 dígitos): 3 primeiros invertidos (1234 → 321),
+ * igual ao MC INV — conferência na centena sorteada (3 últimos do milhar).
+ */
+export function centenaInvertidaTargetFromMilharBet(betNumber: string): string | null {
+  try {
+    return centenaReversedInv(betNumber);
+  } catch {
+    return null;
+  }
+}
+
+export function matchesCentenaInvertidaFromMilharBet(betNumber: string, prize: DrawPrize): boolean {
+  const target = centenaInvertidaTargetFromMilharBet(betNumber);
+  if (!target) return false;
+  return centenaFromDrawMilhar(prize.milhar) === target;
+}
+
+/** Milhar e centena invertida: acerta milhar invertido OU centena invertida do palpite. */
+export function matchesMilharECentenaInvBet(betNumber: string, prize: DrawPrize): boolean {
+  return (
+    matchesMilharInvertidaBet(betNumber, prize) ||
+    matchesCentenaInvertidaFromMilharBet(betNumber, prize)
+  );
 }
 
 /** Palpite grupo × campo grupo do resultado (ex.: 10 em 1234-10). */
